@@ -30,6 +30,7 @@
                 <button class="filter-coursera shadow-sm border-secondary-subtle">
                     <i class="bi bi-sliders"></i> Lọc & Sắp xếp
                 </button>
+<<<<<<< HEAD
                 
                 <div class="vr mx-1 opacity-25"></div> 
                 <div class="dropdown">
@@ -41,8 +42,26 @@
                         <li><a class="dropdown-item" href="#">Thiết kế đồ họa</a></li>
                         <li><a class="dropdown-item" href="#">Digital Marketing</a></li>
                     </ul>
+=======
+                <div class="dropdown-menu coursera-dropdown-menu shadow">
+                    <div class="coursera-filter-header">Chọn Chuyên ngành</div>
+                    <div class="coursera-filter-body">
+                        <div class="form-check custom-checkbox mb-2" th:each="category : ${categories}">
+                            <input class="form-check-input shadow-none" type="checkbox" th:id="'cn-' + ${category.id}" th:value="${category.id}">
+                            <label class="form-check-label d-flex justify-content-between w-100" th:for="'cn-' + ${category.id}">
+                                <span class="text-truncate" style="max-width: 85%;" th:text="${category.name}">Công nghệ thông tin</span>
+                                <span class="text-muted" th:text="${category.documents != null ? category.documents.size() : 0}">(0)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="coursera-filter-footer">
+                        <button class="btn btn-poly-gradient btn-sm rounded-pill px-4 fw-bold">Áp dụng</button>
+                        <button class="btn btn-link btn-sm text-muted text-decoration-none fw-medium" style="color: #6c757d !important;">Xóa lọc</button>
+                    </div>
+>>>>>>> dfb0ed8 (CRDU categories)
                 </div>
 
+<<<<<<< HEAD
                 <div class="dropdown">
                     <button class="filter-coursera dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         Kỹ năng lõi <i class="bi bi-chevron-down ms-1" style="font-size: 11px;"></i>
@@ -65,6 +84,9 @@
                     </ul>
                 </div>
             </div>
+=======
+            
+>>>>>>> dfb0ed8 (CRDU categories)
         </div>
 
         <ul class="nav nav-underline mb-3 border-bottom" id="groupTabs" role="tablist" style="gap: 20px;">

@@ -48,5 +48,10 @@ public class AdminController {
     public String reports() {
         return "admin/reports"; 
     }
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes
     
 }
