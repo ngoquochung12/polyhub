@@ -126,10 +126,15 @@
             <div class="col-12 col-md-3">
                 <div class="kpi-card kpi-storage">
                     <div class="kpi-icon"><i class="bi bi-cloud-check-fill"></i></div>
-                    <div class="flex-grow-1">
-                        <div class="kpi-value">45.2 <span style="font-size: 0.9rem; color: #6B7280; font-weight: 500;">/ 100 GB</span></div>
-                        <div class="kpi-label">Dung lượng Server</div>
-                        <div class="storage-progress"><div class="storage-progress-bar" style="width: 45.2%;"></div></div>
+                    <div class="flex-grow-1" th:if="${!stats.containsKey('cloudinaryError')}">
+                        <div class="kpi-value"><span th:text="${stats.cloudinaryUsageGb}">0</span> <span style="font-size: 0.9rem; color: #6B7280; font-weight: 500;">/ <span th:text="${stats.cloudinaryLimitGb}">0</span> GB</span></div>
+                        <div class="kpi-label">Dung lượng Storage</div>
+                        <div class="storage-progress"><div class="storage-progress-bar" th:style="'width: ' + ${stats.cloudinaryPercent} + '%;'"></div></div>
+                    </div>
+                    <div class="flex-grow-1" th:if="${stats.containsKey('cloudinaryError')}">
+                        <div class="kpi-value text-danger" style="font-size: 1.1rem;">Lỗi kết nối</div>
+                        <div class="kpi-label">Dung lượng Storage</div>
+                        <div class="storage-progress"><div class="storage-progress-bar bg-danger" style="width: 100%;"></div></div>
                     </div>
                 </div>
             </div>
@@ -137,7 +142,7 @@
                 <div class="kpi-card kpi-total">
                     <div class="kpi-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
                     <div>
-                        <div class="kpi-value">8,450</div>
+                        <div class="kpi-value" th:text="${#numbers.formatInteger(stats.total, 1, 'COMMA')}">0</div>
                         <div class="kpi-label">Tổng file học liệu</div>
                     </div>
                 </div>
@@ -146,17 +151,17 @@
                 <div class="kpi-card kpi-reported">
                     <div class="kpi-icon"><i class="bi bi-flag-fill"></i></div>
                     <div>
-                        <div class="kpi-value text-danger">12</div>
-                        <div class="kpi-label">Tài liệu bị Báo cáo</div>
+                        <div class="kpi-value text-danger" th:text="${stats.pending}">0</div>
+                        <div class="kpi-label">Tài liệu Chờ duyệt</div>
                     </div>
                 </div>
             </div>
             <div class="col-12 col-md-3">
                 <div class="kpi-card kpi-top">
-                    <div class="kpi-icon"><i class="bi bi-trophy-fill"></i></div>
+                    <div class="kpi-icon"><i class="bi bi-eye-slash-fill"></i></div>
                     <div>
-                        <div class="kpi-value">Slide Java 1</div>
-                        <div class="kpi-label">Top tải xuống tuần</div>
+                        <div class="kpi-value" th:text="${stats.hidden != null ? stats.hidden : 0}">0</div>
+                        <div class="kpi-label">Tài liệu Đã xóa/ẩn</div>
                     </div>
                 </div>
             </div>
@@ -164,57 +169,75 @@
 
         <!-- 3. Bộ lọc & Tìm kiếm -->
         <div class="filter-card">
-            <div class="row g-3 align-items-center">
-                <div class="col-12 col-lg-4">
-                    <div class="search-input-wrapper">
-                        <i class="bi bi-search"></i>
-                        <input type="text" class="form-control" placeholder="Tìm theo tên file hoặc người đăng...">
-                    </div>
-                </div>
-                <div class="col-12 col-lg-8">
-                    <div class="d-flex gap-2 flex-wrap justify-content-lg-end">
-                        
-                        <div class="dropdown d-inline-block">
-                            <button class="bs-select-mock d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 140px;">
-                                <span>Định dạng</span>
-                                <i class="bi bi-chevron-down ms-2" style="font-size: 11px;"></i>
-                            </button>
-                            <ul class="dropdown-menu shadow-sm dropdown-menu-end">
-                                <li><a class="dropdown-item active" href="#">Tất cả định dạng</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-pdf text-danger me-2"></i> PDF Document (.pdf)</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-word text-primary me-2"></i> Word (.docx)</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-zip text-warning me-2"></i> Archive (.zip/.rar)</a></li>
-                            </ul>
+            <form action="/admin/documents" method="get" id="filterForm">
+                <input type="hidden" name="document_type" id="documentTypeInput" th:value="${documentType}">
+                <input type="hidden" name="category_id" id="categoryInput" th:value="${categoryId}">
+                <input type="hidden" name="status" id="statusInput" th:value="${status}">
+                
+                <div class="row g-3 align-items-center">
+                    <div class="col-12 col-lg-4">
+                        <div class="search-input-wrapper">
+                            <i class="bi bi-search"></i>
+                            <input type="text" name="keyword" class="form-control" th:value="${keyword}" placeholder="Tìm theo tên file, hoặc môn học...">
                         </div>
+                    </div>
+                    <div class="col-12 col-lg-8">
+                        <div class="d-flex gap-2 flex-wrap justify-content-lg-end">
+                            <div class="dropdown d-inline-block">
+                                <button class="bs-select-mock d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 160px;">
+                                    <span th:text="${documentType == null or documentType == '' ? 'Định dạng' : documentType}">Tất cả định dạng</span>
+                                    <i class="bi bi-chevron-down ms-2" style="font-size: 11px;"></i>
+                                </button>
+                                <ul class="dropdown-menu shadow-sm dropdown-menu-end">
+                                    <li><a class="dropdown-item filter-type" href="#" data-value="" th:classappend="${documentType == null or documentType == '' ? 'active' : ''}">Tất cả định dạng</a></li>
+                                    <li th:each="stat : ${typeStats}">
+                                        <a class="dropdown-item filter-type d-flex justify-content-between align-items-center" href="#" th:data-value="${stat[0]}" th:classappend="${documentType == stat[0] ? 'active' : ''}">
+                                            <span>
+                                                <i class="bi bi-file-earmark-text text-secondary me-2"></i>
+                                                <span th:text="${stat[0]}">Định dạng</span>
+                                            </span>
+                                            <span class="badge bg-light text-dark rounded-pill ms-2" th:text="${stat[1]}">0</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
 
-                        <div class="dropdown d-inline-block">
-                            <button class="bs-select-mock d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 150px;">
-                                <span>Chuyên ngành</span>
-                                <i class="bi bi-chevron-down ms-2" style="font-size: 11px;"></i>
-                            </button>
-                            <ul class="dropdown-menu shadow-sm dropdown-menu-end">
-                                <li><a class="dropdown-item active" href="#">Tất cả Chuyên ngành</a></li>
-                                <li><a class="dropdown-item" href="#">Ứng dụng phần mềm</a></li>
-                                <li><a class="dropdown-item" href="#">Thiết kế đồ họa</a></li>
-                                <li><a class="dropdown-item" href="#">Digital Marketing</a></li>
-                            </ul>
-                        </div>
-                        
-                        <div class="dropdown d-inline-block">
-                            <button class="bs-select-mock d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 150px;">
-                                <span>Trạng thái</span>
-                                <i class="bi bi-chevron-down ms-2" style="font-size: 11px;"></i>
-                            </button>
-                            <ul class="dropdown-menu shadow-sm dropdown-menu-end">
-                                <li><a class="dropdown-item active" href="#">Tất cả Trạng thái</a></li>
-                                <li><a class="dropdown-item text-danger fw-bold" href="#"><i class="bi bi-flag me-1"></i> Bị Report</a></li>
-                                <li><a class="dropdown-item" href="#">Công khai</a></li>
-                                <li><a class="dropdown-item text-muted" href="#">Đã Gỡ/Ẩn</a></li>
-                            </ul>
+                            <div class="dropdown d-inline-block">
+                                <button class="bs-select-mock d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 170px;">
+                                    <span th:text="${categoryId == null ? 'Chuyên ngành' : (categories.?[id == __${categoryId}__].size() > 0 ? categories.?[id == __${categoryId}__][0].name : 'Tất cả Chuyên ngành')}">Tất cả Chuyên ngành</span>
+                                    <i class="bi bi-chevron-down ms-2" style="font-size: 11px;"></i>
+                                </button>
+                                <ul class="dropdown-menu shadow-sm dropdown-menu-end" style="max-height: 300px; overflow-y: auto;">
+                                    <li><a class="dropdown-item filter-category" href="#" data-value="" th:classappend="${categoryId == null ? 'active' : ''}">Tất cả Chuyên ngành</a></li>
+                                    <li th:each="stat : ${categoryStats}">
+                                        <a class="dropdown-item filter-category d-flex justify-content-between align-items-center" href="#" th:data-value="${stat[0]}" th:classappend="${categoryId == stat[0] ? 'active' : ''}">
+                                            <span th:text="${stat[1]}">Chuyên ngành</span>
+                                            <span class="badge bg-light text-dark rounded-pill ms-2" th:text="${stat[2]}">0</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div class="dropdown d-inline-block">
+                                <button class="bs-select-mock d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 160px;">
+                                    <span th:text="${status == null ? 'Trạng thái' : (status.name() == 'APPROVED' ? 'Đã duyệt' : (status.name() == 'PENDING' ? 'Chờ duyệt' : (status.name() == 'HIDDEN' ? 'Đã Gỡ/Ẩn' : 'Từ chối')))}">Tất cả Trạng thái</span>
+                                    <i class="bi bi-chevron-down ms-2" style="font-size: 11px;"></i>
+                                </button>
+                                <ul class="dropdown-menu shadow-sm dropdown-menu-end">
+                                    <li><a class="dropdown-item filter-status" href="#" data-value="" th:classappend="${status == null ? 'active' : ''}">Tất cả Trạng thái</a></li>
+                                    <li th:each="stat : ${statusStats}">
+                                        <a class="dropdown-item filter-status d-flex justify-content-between align-items-center" href="#" th:data-value="${stat[0]}" th:classappend="${status == stat[0] ? 'active' : ''}">
+                                            <span th:text="${stat[0].name() == 'APPROVED' ? 'Đã duyệt' : (stat[0].name() == 'PENDING' ? 'Chờ duyệt' : (stat[0].name() == 'HIDDEN' ? 'Đã Gỡ/Ẩn' : 'Từ chối'))}">Trạng thái</span>
+                                            <span class="badge bg-light text-dark rounded-pill ms-2" th:text="${stat[1]}">0</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button type="submit" class="btn btn-primary d-none">Lọc</button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
 
         <!-- 4. Data Table (Hậu kiểm) -->
@@ -232,133 +255,48 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Record 1: Normal PDF -->
-                        <tr>
+                        <tr th:each="doc : ${documentPage.content}" th:classappend="${doc.status.name() == 'HIDDEN'} ? 'opacity-75' : (${doc.status.name() == 'REJECTED'} ? 'bg-danger-subtle' : '')">
                             <td class="ps-4">
                                 <div class="d-flex align-items-center gap-3">
-                                    <div class="file-icon icon-pdf"><i class="bi bi-filetype-pdf"></i></div>
-                                    <div style="line-height: 1.4;">
-                                        <div class="fw-semibold text-dark" style="font-size: 14px;">Slide_Bai1_Java_Core.pdf</div>
-                                        <div class="text-muted" style="font-size: 11px; margin-top: 2px;">Ủy quyền • 2.4 MB • 20/03/2026</div>
+                                    <div class="file-icon"
+                                         th:classappend="${doc.documentType == 'PDF' ? 'icon-pdf' : (doc.documentType == 'WORD' ? 'icon-word' : (doc.documentType == 'EXCEL' ? 'icon-excel' : (doc.documentType == 'PPT' ? 'icon-ppt' : 'icon-zip')))}">
+                                        <i th:class="${doc.documentType == 'PDF' ? 'bi bi-file-earmark-pdf-fill' : (doc.documentType == 'WORD' ? 'bi bi-file-earmark-word-fill' : (doc.documentType == 'EXCEL' ? 'bi bi-file-earmark-excel-fill' : (doc.documentType == 'PPT' ? 'bi bi-file-earmark-ppt-fill' : 'bi bi-file-earmark-zip-fill')))}"></i>
                                     </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <img src="https://ui-avatars.com/api/?name=Lê+Nam&background=random" class="owner-avatar">
-                                    <span class="text-dark fw-medium" style="font-size: 13px;">Lê Văn Nam</span>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="subject-tag">Lập trình Java 1</span>
-                            </td>
-                            <td>
-                                <div class="interaction-stats">
-                                    <div class="stat-item" title="Lượt tải xuống"><i class="bi bi-download"></i> 1,204</div>
-                                    <div class="stat-item" title="Lượt thích"><i class="bi bi-heart-fill text-danger text-opacity-75"></i> 345</div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="status-badge status-public">
-                                    <span class="status-dot"></span> Công khai
-                                </span>
-                            </td>
-                            <td class="text-center" style="padding-right: 1.5rem;">
-                                <div class="dropdown">
-                                    <button class="btn-action-dots mx-auto" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end action-menu shadow">
-                                        <li><a class="dropdown-item fw-medium" href="#" data-bs-toggle="modal" data-bs-target="#previewModal"><i class="bi bi-eye text-primary"></i> Xem trước tài liệu</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-download text-success"></i> Tải xuống (Download)</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item item-warning" href="#" data-bs-toggle="modal" data-bs-target="#warnUserModal"><i class="bi bi-exclamation-triangle"></i> Gửi cảnh cáo User</a></li>
-                                        <li><a class="dropdown-item item-danger" href="#" data-bs-toggle="modal" data-bs-target="#takedownModal"><i class="bi bi-eye-slash-fill"></i> Gỡ tài liệu (Ẩn)</a></li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Record 2: Reported ZIP (Red Flag) -->
-                        <tr style="background-color: #FEF2F2;">
-                            <td class="ps-4">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="file-icon icon-zip"><i class="bi bi-file-earmark-zip-fill"></i></div>
                                     <div style="line-height: 1.4;">
-                                        <div class="fw-semibold text-dark d-flex align-items-center gap-2" style="font-size: 14px;">
-                                            SourceCode_Assigment_Final.zip
-                                            <i class="bi bi-flag-fill text-danger" title="Bị Report 24 lần"></i>
+                                        <div class="fw-semibold text-dark" style="font-size: 14px;">
+                                            <a th:href="${doc.fileUrl}" target="_blank" class="text-dark text-decoration-none" th:text="${doc.title}">Tên tài liệu</a>
                                         </div>
-                                        <div class="text-danger fw-medium" style="font-size: 11px; margin-top: 2px;">15.8 MB • 24 Reports (Share giải bài)</div>
+                                        <div class="text-muted" style="font-size: 11px; margin-top: 2px;">
+                                            <span th:text="${doc.fileSize != null ? #numbers.formatDecimal(doc.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '0 MB'}">Dung lượng</span> • 
+                                            <span th:text="${#temporals.format(doc.createdAt, 'dd/MM/yyyy')}">Ngày tạo</span>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-                                    <img src="https://ui-avatars.com/api/?name=Hải+Đăng&background=random" class="owner-avatar">
-                                    <span class="text-dark fw-medium" style="font-size: 13px;">Nguyễn Hải Đăng</span>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="subject-tag">Thiết kế Web</span>
-                            </td>
-                            <td>
-                                <div class="interaction-stats">
-                                    <div class="stat-item"><i class="bi bi-download"></i> 56</div>
-                                    <div class="stat-item"><i class="bi bi-heart text-muted"></i> 2</div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="status-badge status-warning">
-                                    <span class="status-dot"></span> Bị Cảnh báo
-                                </span>
-                            </td>
-                            <td class="text-center" style="padding-right: 1.5rem;">
-                                <div class="dropdown">
-                                    <button class="btn-action-dots mx-auto" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end action-menu shadow">
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-flag-fill text-danger"></i> Xem danh sách Reports</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-download text-success"></i> Tải File để Kiểm duyệt</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item item-warning" href="#" data-bs-toggle="modal" data-bs-target="#warnUserModal"><i class="bi bi-exclamation-triangle"></i> Gửi cảnh cáo đánh gậy User</a></li>
-                                        <li><a class="dropdown-item item-danger fw-bold" href="#" data-bs-toggle="modal" data-bs-target="#takedownModal"><i class="bi bi-eye-slash-fill"></i> Gỡ tài liệu Khẩn cấp</a></li>
-                                        <li><a class="dropdown-item item-danger" href="#" data-bs-toggle="modal" data-bs-target="#hardDeleteModal"><i class="bi bi-fire"></i> Xóa File Vĩnh viễn (Hard Delete)</a></li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Record 3: Taken down (Hidden) -->
-                        <tr>
-                            <td class="ps-4">
-                                <div class="d-flex align-items-center gap-3 opacity-75">
-                                    <div class="file-icon icon-word"><i class="bi bi-file-earmark-word-fill"></i></div>
-                                    <div style="line-height: 1.4;">
-                                        <div class="text-muted text-decoration-line-through" style="font-size: 14px;">Bai_Tap_Ve_Nha.docx</div>
-                                        <div class="text-muted" style="font-size: 11px; margin-top: 2px;">1.2 MB • Gỡ bởi: Admin Hoàng</div>
+                                    <img th:src="${doc.uploader?.avatar != null ? doc.uploader.avatar : 'https://ui-avatars.com/api/?name=User&background=random'}" 
+                                         class="owner-avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+                                    <div style="line-height: 1.2;">
+                                        <span class="text-dark fw-medium d-block" style="font-size: 13px;" th:text="${doc.uploader?.fullname ?: 'Khuyết danh'}">Học viên</span>
+                                        <small class="text-muted" style="font-size: 11px;" th:text="${doc.uploader?.email ?: 'Không có email'}">Email</small>
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <div class="d-flex align-items-center gap-2 opacity-75">
-                                    <img src="https://ui-avatars.com/api/?name=Orphan&background=F3F4F6&color=6B7280" class="owner-avatar">
-                                    <span class="text-muted" style="font-size: 13px;">Tài khoản đã xóa</span>
+                                <span class="subject-tag" th:text="${doc.category != null ? doc.category.name : 'Khác'}">Môn học</span>
+                            </td>
+                            <td>
+                                <div class="interaction-stats">
+                                    <div class="stat-item" title="Lượt tải xuống"><i class="bi bi-download"></i> <span th:text="${doc.downloadCount}">0</span></div>
+                                    <div class="stat-item" title="Lượt thích"><i class="bi bi-heart-fill text-danger text-opacity-75"></i> 0</div>
                                 </div>
                             </td>
                             <td>
-                                <span class="subject-tag opacity-75">Kỹ năng mềm</span>
-                            </td>
-                            <td>
-                                <div class="interaction-stats opacity-75">
-                                    <div class="stat-item"><i class="bi bi-download"></i> 12</div>
-                                    <div class="stat-item"><i class="bi bi-heart text-muted"></i> 0</div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="status-badge status-hidden">
-                                    <span class="status-dot"></span> Đã Gỡ / Ẩn
+                                <span class="status-badge"
+                                      th:classappend="${doc.status.name() == 'APPROVED' ? 'status-active' : (doc.status.name() == 'PENDING' ? 'status-pending' : (doc.status.name() == 'HIDDEN' ? 'status-hidden' : 'status-danger'))}">
+                                    <span class="status-dot"></span>
+                                    <span th:text="${doc.status.name() == 'APPROVED' ? 'Đã duyệt' : (doc.status.name() == 'PENDING' ? 'Chờ duyệt' : (doc.status.name() == 'HIDDEN' ? 'Đã gỡ/ẩn' : 'Từ chối'))}">Trạng thái</span>
                                 </span>
                             </td>
                             <td class="text-center" style="padding-right: 1.5rem;">
@@ -367,12 +305,108 @@
                                         <i class="bi bi-three-dots-vertical"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end action-menu shadow">
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-eye text-primary"></i> Xem lý do Gỡ (Audit Log)</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-arrow-counterclockwise text-success"></i> Khôi phục Public</a></li>
+                                        <li><a class="dropdown-item fw-medium" th:href="${doc.fileUrl}" target="_blank"><i class="bi bi-eye text-primary"></i> Xem / Tải file gốc</a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item item-danger" href="#" data-bs-toggle="modal" data-bs-target="#hardDeleteModal"><i class="bi bi-fire"></i> Dọn dẹp File (Hard Delete)</a></li>
+                                        
+                                        <li th:if="${doc.status.name() == 'PENDING'}">
+                                            <form th:action="@{/admin/documents/{id}/approve(id=${doc.id})}" method="post" class="m-0">
+                                                <button type="submit" class="dropdown-item item-success fw-medium"><i class="bi bi-check-circle-fill"></i> Duyệt (Approve)</button>
+                                            </form>
+                                        </li>
+                                        
+                                        <li th:if="${doc.status.name() != 'HIDDEN' and doc.status.name() != 'REJECTED'}">
+                                            <a class="dropdown-item item-warning fw-medium" href="#" data-bs-toggle="modal" th:attr="data-bs-target='#takedownModal' + ${doc.id}"><i class="bi bi-slash-circle-fill"></i> Từ Chối / Gỡ bài (Reject)</a>
+                                        </li>
+                                        
+                                        <li th:if="${doc.status.name() == 'HIDDEN' or doc.status.name() == 'REJECTED'}">
+                                            <form th:action="@{/admin/documents/{id}/restore(id=${doc.id})}" method="post" class="m-0">
+                                                <button type="submit" class="dropdown-item fw-medium" style="color: #0dcaf0;"><i class="bi bi-unlock-fill"></i> Mở khóa (Restore)</button>
+                                            </form>
+                                        </li>
+                                        
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item item-danger fw-medium" href="#" data-bs-toggle="modal" th:attr="data-bs-target='#hardDeleteModal' + ${doc.id}"><i class="bi bi-fire"></i> Xóa sạch (Hard Delete)</a></li>
                                     </ul>
                                 </div>
+                                
+                                <!-- Modal Từ chối / Gỡ Tài Liệu -->
+                                <div class="modal fade text-start" th:id="'takedownModal' + ${doc.id}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content" style="border-radius: 16px; border: none;">
+                                            <form th:action="@{/admin/documents/{id}/takedown(id=${doc.id})}" method="post">
+                                                <div class="modal-header" style="background-color: #F9FAFB; border-radius: 16px 16px 0 0;">
+                                                    <h5 class="modal-title fw-bold" style="font-size: 1.1rem;"><i class="bi bi-slash-circle-fill text-danger me-2"></i> Từ Chối / Gỡ Tài liệu</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p class="text-muted" style="font-size: 14px;">Tài liệu <strong th:text="${doc.title}"></strong> của <strong th:text="${doc.uploader != null ? doc.uploader.fullname : 'Khuyết danh'}"></strong> sẽ bị từ chối phê duyệt.</p>
+                                                    <div class="mb-2">
+                                                        <label class="form-label fw-bold text-dark" style="font-size: 13px;">Chọn lý do từ chối (Email sẽ tự động gửi cho Sinh viên)</label>
+                                                        
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input" type="radio" th:name="'reason_radio_' + ${doc.id}" th:id="'reason1_' + ${doc.id}" value="Nội dung vi phạm bản quyền hoặc tiêu chuẩn cộng đồng." required th:onchange="|toggleCustomReason(this, 'customReason_${doc.id}')|">
+                                                            <label class="form-check-label" th:for="'reason1_' + ${doc.id}" style="font-size: 14px;">Vi phạm bản quyền / Tiêu chuẩn cộng đồng</label>
+                                                        </div>
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input" type="radio" th:name="'reason_radio_' + ${doc.id}" th:id="'reason2_' + ${doc.id}" value="Tài liệu đăng sai chuyên ngành học." th:onchange="|toggleCustomReason(this, 'customReason_${doc.id}')|">
+                                                            <label class="form-check-label" th:for="'reason2_' + ${doc.id}" style="font-size: 14px;">Tài liệu đăng sai chuyên ngành học</label>
+                                                        </div>
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input" type="radio" th:name="'reason_radio_' + ${doc.id}" th:id="'reason3_' + ${doc.id}" value="Tập tin bị lỗi, không thể mở hoặc đọc được nội dung." th:onchange="|toggleCustomReason(this, 'customReason_${doc.id}')|">
+                                                            <label class="form-check-label" th:for="'reason3_' + ${doc.id}" style="font-size: 14px;">File lỗi / Không thể mở</label>
+                                                        </div>
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input" type="radio" th:name="'reason_radio_' + ${doc.id}" th:id="'reason4_' + ${doc.id}" value="KHAC" th:onchange="|toggleCustomReason(this, 'customReason_${doc.id}')|">
+                                                            <label class="form-check-label" th:for="'reason4_' + ${doc.id}" style="font-size: 14px;">Lý do khác (Nhập tay)...</label>
+                                                        </div>
+                                                        
+                                                    </div>
+                                                    
+                                                    <!-- Input để chứa lý do cuối cùng gửi về controller -->
+                                                    <input type="hidden" name="reason" th:id="'finalReason_' + ${doc.id}">
+                                                    
+                                                    <!-- Ô gõ lý do tuỳ chỉnh (ẩn mặc định) -->
+                                                    <div th:id="'customReason_' + ${doc.id}" class="mt-2 d-none">
+                                                        <textarea class="form-control form-control-sm" rows="2" placeholder="Gõ lý do chi tiết vào đây để gửi mail..." th:id="'customReasonInput_' + ${doc.id}" th:onkeyup="|updateFinalReason(this, 'finalReason_${doc.id}')|"></textarea>
+                                                    </div>
+                                                    
+                                                </div>
+                                                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                                                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Hủy</button>
+                                                    <button type="submit" class="btn btn-danger btn-sm" th:onclick="'prepareReasonSubmission(' + ${doc.id} + ')'"><i class="bi bi-send-fill me-1"></i> Báo Cáo & Tước quyền</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Modal Hard Delete -->
+                                <div class="modal fade text-start" th:id="'hardDeleteModal' + ${doc.id}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-danger" style="border-radius: 16px;">
+                                            <form th:action="@{/admin/documents/{id}/delete(id=${doc.id})}" method="post">
+                                                <div class="modal-header bg-danger text-white" style="border-radius: 14px 14px 0 0;">
+                                                    <h5 class="modal-title fw-bold" style="font-size: 1.1rem;"><i class="bi bi-fire me-2"></i>Xóa vĩnh viễn</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body text-center py-4">
+                                                    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+                                                    <h5 class="fw-bold mt-3 mb-2 text-danger">Xóa vĩnh viễn trên Server!</h5>
+                                                    <p class="text-muted mb-0" style="font-size: 14px;">Đang xóa: <strong th:text="${doc.title}"></strong></p>
+                                                </div>
+                                                <div class="modal-footer justify-content-center" style="border-radius: 0 0 16px 16px;">
+                                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                                                    <button type="submit" class="btn btn-danger">Xóa sạch</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(documentPage.content)}">
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-folder-x fs-1 d-block mb-3"></i>Không tìm thấy tài liệu nào.
                             </td>
                         </tr>
                     </tbody>
@@ -380,100 +414,108 @@
             </div>
             
             <!-- Pagination -->
-            <div class="p-3 border-top d-flex align-items-center justify-content-between">
-                <span class="text-muted" style="font-size: 13px;">Hiển thị 1 - 10 trong 8,450 tài liệu</span>
+            <div class="p-3 border-top d-flex align-items-center justify-content-between" th:if="${documentPage.totalPages > 0}">
+                <span class="text-muted" style="font-size: 13px;" th:text="'Hiển thị ' + (${documentPage.number * documentPage.size + 1}) + ' - ' + (${documentPage.number * documentPage.size + documentPage.numberOfElements}) + ' trong ' + ${documentPage.totalElements} + ' tài liệu'"></span>
                 <nav aria-label="Page navigation">
                     <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item disabled"><a class="page-link" href="#">Trang trước</a></li>
-                        <li class="page-item active" style="--bs-pagination-active-bg: var(--admin-primary); --bs-pagination-active-border-color: var(--admin-primary);"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link text-dark" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link text-dark" href="#">...</a></li>
-                        <li class="page-item"><a class="page-link text-dark" href="#">845</a></li>
-                        <li class="page-item"><a class="page-link text-dark" href="#">Trang sau</a></li>
+                        <li class="page-item" th:classappend="${documentPage.first ? 'disabled' : ''}">
+                            <a class="page-link" th:href="@{/admin/documents(page=${documentPage.number}, keyword=${keyword}, category_id=${categoryId}, status=${status}, document_type=${documentType})}" tabindex="-1" aria-disabled="true">Trang trước</a>
+                        </li>
+                        
+                        <li th:if="${documentPage.totalPages > 0}" th:each="i : ${#numbers.sequence(1, documentPage.totalPages)}" 
+                            class="page-item" 
+                            th:classappend="${documentPage.number + 1 == i ? 'active' : ''}"
+                            th:styleappend="${documentPage.number + 1 == i ? '--bs-pagination-active-bg: var(--admin-primary); --bs-pagination-active-border-color: var(--admin-primary);' : ''}">
+                            <a class="page-link" th:classappend="${documentPage.number + 1 != i ? 'text-dark' : ''}" 
+                               th:href="@{/admin/documents(page=${i}, keyword=${keyword}, category_id=${categoryId}, status=${status}, document_type=${documentType})}" 
+                               th:text="${i}">1</a>
+                        </li>
+
+                        <li class="page-item" th:classappend="${documentPage.last ? 'disabled' : ''}">
+                            <a class="page-link" th:classappend="${!documentPage.last ? 'text-dark' : ''}" th:href="@{/admin/documents(page=${documentPage.number + 2}, keyword=${keyword}, category_id=${categoryId}, status=${status}, document_type=${documentType})}">Trang sau</a>
+                        </li>
                     </ul>
                 </nav>
             </div>
         </div>
 
-        <!-- 5. Modals for Interventions -->
         
-        <!-- Modal View PDF Preview -->
-        <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered">
-                <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
-                    <div class="modal-header py-2" style="background-color: #1F2937; color: white; border-bottom: none;">
-                        <h5 class="modal-title" style="font-size: 1rem;"><i class="bi bi-file-pdf me-2 text-danger"></i> Slide_Bai1_Java_Core.pdf</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-0">
-                        <!-- Mock Preview Container -->
-                        <div class="preview-container">
-                            <div class="text-center text-muted">
-                                <i class="bi bi-file-earmark-pdf" style="font-size: 3rem; color: #9CA3AF;"></i>
-                                <p class="mt-2 mb-0">Trình cắm PDF Viewer sẽ hiển thị ở đây</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Gỡ Tài Liệu (Soft Delete) -->
-        <div class="modal fade" id="takedownModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content" style="border-radius: 16px; border: none;">
-                    <div class="modal-header" style="background-color: #F9FAFB; border-radius: 16px 16px 0 0;">
-                        <h5 class="modal-title fw-bold" style="font-size: 1.1rem;"><i class="bi bi-eye-slash-fill text-danger me-2"></i> Gỡ Tài liệu (Takedown)</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-muted" style="font-size: 14px;">Tài liệu sẽ bị <strong>Ẩn khỏi cộng đồng</strong> (Soft Delete) nhưng vẫn giữ File gốc trên Server. Người đăng sẽ nhận được email thông báo do lỗi vi phạm.</p>
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold" style="font-size: 13px;">Lý do gỡ tài liệu (Bắt buộc) <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-sm mb-2" style="font-size: 13.5px; height: 38px;">
-                                <option value="">-- Chọn một lý do tiêu chuẩn --</option>
-                                <option value="copyright">Vi phạm bản quyền / Share Assignment</option>
-                                <option value="wrong_subject">Sai môn học / Nội dung không liên quan</option>
-                                <option value="corrupted">File lỗi / File rác</option>
-                                <option value="other">Lý do khác...</option>
-                            </select>
-                            <textarea class="form-control" rows="2" placeholder="Ghi chú chi tiết thêm vào Audit Log..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
-                        <button type="button" class="btn btn-light btn-sm px-4" data-bs-dismiss="modal">Hủy</button>
-                        <button type="button" class="btn btn-danger btn-sm px-4 fw-bold">Xác nhận Gỡ Tài liệu</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Hard Delete File -->
-        <div class="modal fade" id="hardDeleteModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-danger" style="border-radius: 16px;">
-                    <div class="modal-header bg-danger text-white" style="border-radius: 14px 14px 0 0;">
-                        <h5 class="modal-title fw-bold" style="font-size: 1.1rem;"><i class="bi bi-fire me-2"></i>Xóa vĩnh viễn (Hard Delete)</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body text-center py-4">
-                        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
-                        <h5 class="fw-bold mt-3 mb-2 text-danger">Xóa tận gốc File trên Server!</h5>
-                        <p class="text-muted mb-0" style="font-size: 14px;">
-                            Hành động này sẽ <strong>xóa file vật lý khỏi Cloud Storage</strong> và không thể hoàn tác. Chỉ nên dùng khi phát hiện File chứa Malware/Virus hoặc dọn rác hệ thống.
-                        </p>
-                    </div>
-                    <div class="modal-footer justify-content-center" style="border-radius: 0 0 16px 16px;">
-                        <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Hủy bỏ</button>
-                        <button type="button" class="btn btn-danger px-4 fw-bold"><i class="bi bi-trash3-fill"></i> Tiến hành Xóa sạch</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
-    
-    <th:block th:fragment="myJs"></th:block>
+    <!-- Scripts -->
+    <th:block th:fragment="myJs">
+        <script>
+            // JS Bổ sung: Hiển thị / Ẩn ô nhập lý do Tuỳ chỉnh
+            function toggleCustomReason(radioElement, customDivId) {
+                const customDiv = document.getElementById(customDivId);
+                const customInput = customDiv.querySelector('textarea');
+                
+                if (radioElement.value === 'KHAC') {
+                    customDiv.classList.remove('d-none');
+                    customInput.required = true; // Bắt buộc gõ nếu chọn KHÁC
+                } else {
+                    customDiv.classList.add('d-none');
+                    customInput.required = false; 
+                }
+            }
+
+            // Đồng bộ hoá nội dung text vào hidden input 
+            function updateFinalReason(textareaElement, finalInputId) {
+                document.getElementById(finalInputId).value = textareaElement.value;
+            }
+
+            // Khi submit form, gom reason
+            function prepareReasonSubmission(docId) {
+                const finalInput = document.getElementById('finalReason_' + docId);
+                const radioButtons = document.getElementsByName('reason_radio_' + docId);
+                let selectedRadioValue = "";
+                
+                for (let r of radioButtons) {
+                    if (r.checked) {
+                        selectedRadioValue = r.value;
+                        break;
+                    }
+                }
+                
+                if (selectedRadioValue === 'KHAC') {
+                    const customText = document.getElementById('customReasonInput_' + docId).value;
+                    finalInput.value = customText;
+                } else {
+                    finalInput.value = selectedRadioValue;
+                }
+            }
+            
+            // Lắng nghe sự kiện click cho các item trong dropdown bộ lọc
+            document.addEventListener("DOMContentLoaded", function() {
+                const filterForm = document.getElementById("filterForm");
+                const documentTypeInput = document.getElementById("documentTypeInput");
+                const categoryInput = document.getElementById("categoryInput");
+                const statusInput = document.getElementById("statusInput");
+                
+                document.querySelectorAll(".filter-type").forEach(function(el) {
+                    el.addEventListener("click", function(e) {
+                        e.preventDefault();
+                        documentTypeInput.value = this.getAttribute("data-value");
+                        filterForm.submit();
+                    });
+                });
+                
+                document.querySelectorAll(".filter-category").forEach(function(el) {
+                    el.addEventListener("click", function(e) {
+                        e.preventDefault();
+                        categoryInput.value = this.getAttribute("data-value");
+                        filterForm.submit();
+                    });
+                });
+                
+                document.querySelectorAll(".filter-status").forEach(function(el) {
+                    el.addEventListener("click", function(e) {
+                        e.preventDefault();
+                        statusInput.value = this.getAttribute("data-value");
+                        filterForm.submit();
+                    });
+                });
+            });
+        </script>
+    </th:block>
 </body>
 </html>
